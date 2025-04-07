@@ -1,16 +1,22 @@
 {
-  "name": "node-sandbox",
+  "name": "ashen-proxies",
   "version": "1.0.0",
-  "description": "Simple Node Sandbox",
-  "main": "src/index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "nodemon src/index.js localhost 8080"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "node-fetch": "^2.5.0",
-    "openai": "^4.79.1"
+    "await": "^0.2.6",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
   },
-  "devDependencies": {
-    "nodemon": "1.18.4"
-  }
+  "description": ""
 }

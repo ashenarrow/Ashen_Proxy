@@ -1,148 +1,202 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Ashen Proxy</title>
-    <style>
-      body {
-        font-family: "Dancing Script", cursive;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(to bottom right, #f00, #f80, #ff0, #fff);
-        background-size: 400% 400%;
-        animation: fireGradient 10s ease infinite;
-        overflow: hidden;
-      }
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced CORS Proxy</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+    }
+    /* Navigation header styling */
+    #header {
+      background: #333;
+      color: #fff;
+      padding: 10px;
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
+    }
+    #urlInput {
+      padding: 5px;
+      width: 300px;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    /* Bookmark bar styling */
+    #bookmarkBar {
+      background: #444;
+      padding: 5px;
+      flex: 0 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    #bookmarkBar a {
+      color: #fff;
+      background: #555;
+      padding: 5px 10px;
+      text-decoration: none;
+      border-radius: 3px;
+      font-size: 0.9em;
+    }
+    /* Iframe container styling */
+    #iframe-container {
+      flex: 1 1 auto;
+      width: 100%;
+      position: relative;
+    }
+    #proxyFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    /* Loading bar styling */
+    #loadingBar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: #29d;
+      width: 0%;
+      transition: width 0.2s ease;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+  <div id="header">
+    <input type="text" id="urlInput" placeholder="Enter full URL e.g. https://example.com">
+    <button onclick="loadIframe()">Go</button>
+    <button onclick="goBack()">Back</button>
+    <button onclick="goForward()">Forward</button>
+    <button onclick="reloadIframe()">Reload</button>
+    <button onclick="bookmarkCurrent()">Bookmark</button>
+  </div>
+  <div id="bookmarkBar"></div>
+  <div id="iframe-container">
+    <div id="loadingBar"></div>
+    <iframe id="proxyFrame" onload="hideLoading()"></iframe>
+  </div>
+  <script>
+    const urlInput = document.getElementById('urlInput');
+    const proxyFrame = document.getElementById('proxyFrame');
+    const bookmarkBar = document.getElementById('bookmarkBar');
+    const loadingBar = document.getElementById('loadingBar');
 
-      @keyframes fireGradient {
-        0% {
-          background-position: 0% 50%;
+    // Show loading bar progress simulation.
+    function showLoading() {
+      loadingBar.style.width = '0%';
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 20; // simulate fast progress
+        if (progress < 90) {
+          loadingBar.style.width = progress + '%';
+        } else {
+          clearInterval(interval);
         }
-        25% {
-          background-position: 50% 50%;
-        }
-        50% {
-          background-position: 100% 50%;
-        }
-        75% {
-          background-position: 50% 50%;
-        }
-        100% {
-          background-position: 0% 50%;
-        }
+      }, 50);
+    }
+    function hideLoading() {
+      loadingBar.style.width = '100%';
+      setTimeout(() => {
+        loadingBar.style.width = '0%';
+      }, 200);
+    }
+
+    // Extract token from parent URL (/p/<token>)
+    function getTokenFromPath() {
+      const match = window.location.pathname.match(/^\/p\/(\d+)/);
+      return match ? match[1] : null;
+    }
+    function loadIframeFromToken(token) {
+      if (token) {
+        proxyFrame.src = '/proxy/' + token;
+        showLoading();
       }
+    }
 
-      #content {
-        margin-top: 20px;
-        width: 80%;
-        max-width: 800px;
-        border: 1px solid #f5c518;
-        border-radius: 5px;
-        padding: 20px;
-        background-color: #333;
-        color: #fff;
-        overflow: auto;
+    // Load URL via proxy; server will generate token.
+    function loadIframe(url) {
+      let targetUrl = url || urlInput.value.trim();
+      if (!targetUrl) {
+        alert('Please enter a URL.');
+        return;
       }
-
-      #searchContainer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.8);
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.3s ease-in-out;
+      if (!/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = 'https://' + targetUrl;
       }
+      urlInput.value = targetUrl;
+      window.location.href = '/proxy?url=' + encodeURIComponent(targetUrl);
+    }
 
-      #searchContainer.hidden {
-        display: none;
+    // Navigation using browser history.
+    function goBack() {
+      history.back();
+    }
+    function goForward() {
+      history.forward();
+    }
+    function reloadIframe() {
+      proxyFrame.contentWindow.location.reload();
+      showLoading();
+    }
+
+    // Bookmark current proxied page (store token).
+    function bookmarkCurrent() {
+      const currentSrc = proxyFrame.src;
+      if (!currentSrc) {
+        alert('No page to bookmark.');
+        return;
       }
-
-      #showSearchButton {
-        display: none;
+      const token = currentSrc.split('/').pop();
+      let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
+      if (!bookmarks.includes(token)) {
+        bookmarks.push(token);
+        localStorage.setItem('bookmarks', JSON.stringify(bookmarks));
+        renderBookmarks();
+      } else {
+        alert('Bookmark already exists.');
       }
-
-      #searchContainer form {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 50%;
-        max-width: 600px;
-        padding: 20px;
-        border: 1px solid #f5c518;
-        border-radius: 5px;
-        background-color: rgba(255, 255, 255, 0.1);
-      }
-
-      #searchContainer input[type="text"] {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 10px;
-        border: none;
-        border-radius: 3px;
-        background-color: rgba(255, 255, 255, 0.2);
-        color: #fff;
-      }
-
-      #searchContainer button {
-        padding: 10px 20px;
-        background-color: #f5c518;
-        color: #222;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="searchContainer">
-      <h1>Ashen Proxy</h1>
-      <form id="urlForm">
-        <input type="text" id="urlInput" name="input" placeholder="Enter URL" />
-        <button type="submit">Load</button>
-      </form>
-      <div id="content"></div>
-    </div>
-
-    <button id="showSearchButton">Show Search</button>
-
-    <script>
-      const searchContainer = document.getElementById("searchContainer");
-      const showSearchButton = document.getElementById("showSearchButton");
-      const form = document.getElementById("urlForm");
-      const contentDiv = document.getElementById("content");
-
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        const input = document.getElementById("urlInput").value;
-
-        fetch("/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: "url=" + encodeURIComponent(input),
-        })
-          .then((response) => response.text())
-          .then((data) => {
-            contentDiv.innerHTML = data;
-          })
-          .catch((error) => {
-            contentDiv.innerHTML = "Error: " + error;
-          });
+    }
+    function renderBookmarks() {
+      let bookmarks = JSON.parse(localStorage.getItem('bookmarks')) || [];
+      bookmarkBar.innerHTML = '';
+      bookmarks.forEach(token => {
+        const a = document.createElement('a');
+        a.href = '/p/' + token;
+        a.textContent = token;
+        a.onclick = function(e) {
+          e.preventDefault();
+          window.location.href = '/p/' + token;
+        };
+        bookmarkBar.appendChild(a);
       });
-      window.addEventListener("hashchange", () => {
-        searchContainer.classList.add("hidden");
-      });
-    </script>
-  </body>
+    }
+
+    // On page load, load token if present.
+    document.addEventListener('DOMContentLoaded', () => {
+      renderBookmarks();
+      const token = getTokenFromPath();
+      if (token) {
+        loadIframeFromToken(token);
+      }
+    });
+    window.addEventListener('popstate', function(e) {
+      const token = getTokenFromPath();
+      if (token) {
+        loadIframeFromToken(token);
+      }
+    });
+  </script>
+</body>
 </html>
